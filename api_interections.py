@@ -11,7 +11,7 @@ logger = logging.getLogger("salesbot")
 def get_token():
     payload = {
         "client_id": os.getenv("MOLTIN_CLIENT_ID"),
-        "client_secret": os.getenv("MOLTIN_CLIENS_SECRET"),
+        "client_secret": os.getenv("MOLTIN_CLIENT_SECRET"),
         "grant_type": "client_credentials"
     }
     response = requests.post(
