@@ -10,7 +10,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import get_token, get_products
+from api_interections import get_token, get_products, get_product
 
 
 logger = logging.getLogger("quizbot")
@@ -32,7 +32,7 @@ def start(bot, update):
         text="Choose:",
         reply_markup=reply_markup
     )
-    return "ECHO"
+    return "HANDLE_MENU"
 
 
 def echo(bot, update):
@@ -41,11 +41,30 @@ def echo(bot, update):
     return "ECHO"
 
 
+def handle_menu(bot, update, redis_db):
+    product_id = update.callback_query.data
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
+    logger.info(product_id)
+    product_params = get_product(token, product_id)["data"]
+    product_name = product_params["attributes"]["name"]
+    product_description = product_params["attributes"]["description"]
+    chat_id = update.callback_query.message.chat_id
+    state = redis_db.get(chat_id)
+    logger.info(state)
+    bot.send_message(
+        text=f"{product_name}\n\n{product_description}",
+        chat_id=chat_id
+    )
+    return "START"
+
+
 def handle_users_reply(bot, update, redis_db):
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
     elif update.callback_query:
+        user_state = "HANDLE_MENU"
         user_reply = update.callback_query.data
         chat_id = update.callback_query.message.chat_id
     else:
@@ -57,6 +76,7 @@ def handle_users_reply(bot, update, redis_db):
     
     states_functions = {
         'START': start,
+        "HANDLE_MENU": handle_menu,
         'ECHO': echo
     }
     state_handler = states_functions[user_state]
@@ -82,7 +102,7 @@ if __name__ == '__main__':
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(
-        CallbackQueryHandler(partial(handle_users_reply, redis_db=redis_db))
+        CallbackQueryHandler(partial(handle_menu, redis_db=redis_db))
     )
     dispatcher.add_handler(
         MessageHandler(
