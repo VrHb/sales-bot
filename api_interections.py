@@ -22,7 +22,7 @@ def authorize(func):
 
 def get_client_token():
     payload = {
-        "client_id": os.getenv("CLIENT_ID"),
+        "client_id": os.getenv("MOLTIN_APP_CLIENT_ID"),
         "grant_type": "implicit"
     }
     response = requests.post(
