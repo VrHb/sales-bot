@@ -10,22 +10,26 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
+from api_interections import get_token, get_products
+
 
 logger = logging.getLogger("quizbot")
 
 def start(bot, update):
-    keyboard = [
-        [
-            InlineKeyboardButton("Option 1", callback_data="1"),
-            InlineKeyboardButton("Option 2", callback_data="2")
-        ],
-        [
-            InlineKeyboardButton("Option 3", callback_data="3"),
-        ]
-    ]
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
+    products = get_products(token)["data"]
+    keyboard = []
+    for product in products:
+        keyboard.append(
+            [InlineKeyboardButton(
+                product["attributes"]["name"],
+                callback_data=product["id"]
+            )]
+        )
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(
-        text='Please choose:',
+        text="Choose:",
         reply_markup=reply_markup
     )
     return "ECHO"
@@ -74,8 +78,8 @@ if __name__ == '__main__':
         password=os.getenv("REDIS_PASSWORD"),
         decode_responses=True
     )
-    token = os.getenv("TG_BOT_TOKEN")
-    updater = Updater(token)
+    bot_token = os.getenv("TG_BOT_TOKEN")
+    updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(
         CallbackQueryHandler(partial(handle_users_reply, redis_db=redis_db))
