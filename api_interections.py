@@ -8,6 +8,31 @@ import requests
 
 logger = logging.getLogger("salesbot")
 
+def authorize(func):
+    def wrapper(token, *args, **kwargs):
+        try:
+            result = func(token, *args, **kwargs)
+        except:
+            token = f"Bearer {get_token()['access_token']}"
+            result = func(token, *args, **kwargs)
+        finally:
+            return result
+    return wrapper
+
+
+def get_client_token():
+    payload = {
+        "client_id": os.getenv("CLIENT_ID"),
+        "grant_type": "implicit"
+    }
+    response = requests.post(
+        "https://api.moltin.com/oauth/access_token",
+        data=payload
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def get_token():
     payload = {
         "client_id": os.getenv("MOLTIN_CLIENT_ID"),
@@ -17,6 +42,27 @@ def get_token():
     response = requests.post(
         "https://api.moltin.com/oauth/access_token",
          data=payload
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def create_customer(token):
+    headers = {
+        "Authorization": token,
+    }
+    payload = {
+        "data": {
+            "name": "Jack Sparrow",
+            "password": "password",
+            "email": "some_email@mail.com",
+            "type": "customer",
+        }
+    }
+    response = requests.post(
+        "https://api.moltin.com/v2/customers",
+        headers=headers,
+        json=payload
     )
     response.raise_for_status()
     return response.json()
@@ -32,24 +78,82 @@ def get_products(token):
     return response.json()
 
 
+def create_cart(token, cart_name, cart_id):
+    headers = {
+        "Authorization": token,
+    }
+    payload = {
+        "data": {
+            "name": f"{cart_name}",
+            "id": f"{cart_id}",
+            "description": "How much is the fish?"
+        }
+    }
+    response = requests.post(
+        "https://api.moltin.com/v2/carts",
+        json=payload,
+        headers=headers
+        )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_cart(token, cart_id):
+    headers = {
+        "Authorization": token,
+    }
+    response = requests.get(
+        f"https://api.moltin.com/v2/carts/{cart_id}",
+        headers=headers
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def add_product_to_cart(token, product, cart_id):
+    headers = {
+        "Authorization": token,
+        "Content-Type": "application/json",
+    }
+
+    json_data = {
+        "data": {
+            "type": "custom_item",
+            "name": product["attributes"]["name"],
+            'sku': product["attributes"]["sku"],
+            'description': product["attributes"]["description"],
+            'quantity': 1,
+            'price': {
+                'amount': 3,
+            },
+        },
+    }
+    response = requests.post(
+        f"https://api.moltin.com/v2/carts/{cart_id}/items",
+        headers=headers,
+        json=json_data
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def main():
     load_dotenv()
-    moltin_token = os.getenv("MOLTIN_API_TOKEN")
-    print(moltin_token)
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO
     )
-    parser = argparse.ArgumentParser(
-        description="Получение товаров"
-    )
-    parser.add_argument(
-        "--url",
-        default="url",
-        help="url адрес ресурса"
-    )
-    args = parser.parse_args()
-    logger.info(get_products(moltin_token))
+    token_params = get_token()
+    client_token_params = get_client_token()
+    token = f"Bearer {token_params['access_token']}"
+    client_token = f"Bearer {client_token_params['access_token']}"
+    logger.info(token)
+    products = get_products(token)
+    product = products["data"][0]
+    # logger.info(product)
+    # logger.info(create_cart(token, "fishes", "ff1"))
+    # logger.info(get_cart(token, "ff1"))
+    logger.info(add_product_to_cart(token, product, "fish_cart"))
 
 
 if __name__ == "__main__":
