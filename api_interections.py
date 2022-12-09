@@ -78,6 +78,16 @@ def get_products(token):
     return response.json()
 
 
+def get_product(token, product_id):
+    headers = {"Authorization": token}
+    response = requests.get(
+            f"https://api.moltin.com/pcm/products/{product_id}",
+        headers=headers
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def create_cart(token, cart_name, cart_id):
     headers = {
         "Authorization": token,
@@ -163,8 +173,8 @@ def main():
     product = products["data"][0]
     logger.info(product)
     # logger.info(create_cart(token, "fishes", "ff1"))
-    logger.info(get_cart(token, "fish_cart"))
-    logger.info(get_cart_items(token, "fish_cart"))
+    # logger.info(get_cart(token, "fish_cart"))
+    # logger.info(get_cart_items(token, "fish_cart"))
     # logger.info(add_product_to_cart(token, product, "fish_cart"))
 
 
