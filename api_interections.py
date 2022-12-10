@@ -131,6 +131,21 @@ def get_cart_items(token, cart_id):
     response.raise_for_status()
     return response.json()
 
+
+def upload_product_image(token, file_path, product_id):
+    headers = {
+        "Content-type": "multipart/form-data",
+        "Authorization": token,
+    }
+    with open(file_path, "rb") as f:
+        response = requests.post(
+            f"https://api.moltin.com/v2/products/{product_id}/relationships/main-image",
+            headers=headers,
+            files={"file": f}
+        )
+    return response.json()
+
+
 def add_product_to_cart(token, product, cart_id):
     headers = {
         "Authorization": token,
