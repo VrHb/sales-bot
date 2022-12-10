@@ -69,15 +69,15 @@ def handle_users_reply(bot, update, redis_db):
         chat_id = update.callback_query.message.chat_id
     else:
         return
-    if user_reply == '/start':
-        user_state = 'START'
+    if user_reply == "/start":
+        user_state = "START"
     else:
         user_state = redis_db.get(chat_id)
     
     states_functions = {
-        'START': start,
+        "START": start,
         "HANDLE_MENU": handle_menu,
-        'ECHO': echo
+        "ECHO": echo
     }
     state_handler = states_functions[user_state]
     try:
@@ -87,7 +87,7 @@ def handle_users_reply(bot, update, redis_db):
         print(err)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO
@@ -111,7 +111,7 @@ if __name__ == '__main__':
         )
     )
     dispatcher.add_handler(
-        CommandHandler('start', partial(handle_users_reply, redis_db=redis_db))
+        CommandHandler("start", partial(handle_users_reply, redis_db=redis_db))
     )
     updater.start_polling()
     updater.idle()
