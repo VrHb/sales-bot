@@ -142,27 +142,27 @@ def upload_product_image(token, file_url):
         headers=headers,
         files=file
     )
-    logger.info(file)
-    return response.text
+    return response.json()
 
 
-def add_image_to_product(token, product_id):
+def add_image_to_product(token, product_id, image_id):
     headers = {
         "Authorization": token,
     }
     payload = {
-        "data":
+        "data": [
             {
-                "type": "main_image",
-                "id": product_id
-            }
+                "type": "file",
+                "id": image_id
+            },
+        ],
     }
     response = requests.post(
-        f"https://api.moltin.com/v2/products/{product_id}/relationships/main-image",
+        f"https://api.moltin.com/pcm/products/{product_id}/relationships/files",
         headers=headers,
-        data=payload
+        json=payload
     )
-    return response.json()
+    return response.status_code
 
 
 def add_product_to_cart(token, product, cart_id):
@@ -205,12 +205,13 @@ def main():
     logger.info(token)
     products = get_products(token)
     product = products["data"][0]
-    # logger.info(product)
-    logger.info(upload_product_image(
+    logger.info(product)
+    file_params = upload_product_image(
         token,
         "https://cdn.shopify.com/s/files/1/0770/9251/products/IMG_7795_2048x.JPG",
-        )
     )
+    image_id = file_params["data"]["id"]
+    logger.info(add_image_to_product(token, product["id"], image_id))
     # logger.info(create_cart(token, "fishes", "ff1"))
     # logger.info(get_cart(token, "fish_cart"))
     # logger.info(get_cart_items(token, "fish_cart"))
