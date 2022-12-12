@@ -10,7 +10,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import get_token, get_products, get_product
+from api_interections import get_token, get_products, get_product, get_file
 
 
 logger = logging.getLogger("quizbot")
@@ -49,12 +49,18 @@ def handle_menu(bot, update, redis_db):
     product_params = get_product(token, product_id)["data"]
     product_name = product_params["attributes"]["name"]
     product_description = product_params["attributes"]["description"]
+    loaded_image_id = product_params["relationships"]["main_image"]["data"]["id"]
+    image_link = get_file(token, loaded_image_id)["data"]["link"]["href"]
     chat_id = update.callback_query.message.chat_id
     state = redis_db.get(chat_id)
     logger.info(state)
-    bot.send_message(
-        text=f"{product_name}\n\n{product_description}",
-        chat_id=chat_id
+    message_id = update.callback_query.message.message_id
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
+    bot.send_photo(
+        chat_id=chat_id,
+        photo=image_link,
+        caption=f"*{product_name}*\n\n{product_description}",
+        parse_mode="markdown"
     )
     return "START"
 
