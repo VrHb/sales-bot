@@ -136,11 +136,11 @@ def upload_product_image(token, file_url):
     headers = {
         "Authorization": token,
     }
-    file = {"file_location": (None, file_url)}
+    files = {"file_location": (None, file_url)}
     response = requests.post(
         "https://api.moltin.com/v2/files",
         headers=headers,
-        files=file
+        files=files
     )
     return response.json()
 
@@ -148,21 +148,32 @@ def upload_product_image(token, file_url):
 def add_image_to_product(token, product_id, image_id):
     headers = {
         "Authorization": token,
+        "Content-Type": "application/json"
     }
     payload = {
-        "data": [
+        "data": 
             {
                 "type": "file",
                 "id": image_id
             },
-        ],
     }
-    response = requests.post(
-        f"https://api.moltin.com/pcm/products/{product_id}/relationships/files",
+    response = requests.put(
+        f"https://api.moltin.com/pcm/products/{product_id}/relationships/main_image",
         headers=headers,
         json=payload
     )
     return response.status_code
+
+
+def get_file(token, file_id):
+    headers = {
+        "Authorization": token,
+    }
+    response = requests.get(
+        f"https://api.moltin.com/v2/files/{file_id}",
+        headers=headers
+    )
+    return response.json()
 
 
 def add_product_to_cart(token, product, cart_id):
@@ -205,13 +216,19 @@ def main():
     logger.info(token)
     products = get_products(token)
     product = products["data"][0]
-    logger.info(product)
+    # logger.info(product)
+    loaded_image_id = product["relationships"]["main_image"]["data"]["id"]
+    logger.info(loaded_image_id)
+    """
     file_params = upload_product_image(
         token,
-        "https://cdn.shopify.com/s/files/1/0770/9251/products/IMG_7795_2048x.JPG",
+        "https://images.fineartamerica.com/images-medium-large-5/green-fish-wendy-j-st-christopher.jpg"
     )
-    image_id = file_params["data"]["id"]
-    logger.info(add_image_to_product(token, product["id"], image_id))
+    """
+    # image_id = file_params["data"]["id"]
+    # logger.info(image_id)
+    # logger.info(add_image_to_product(token, product["id"], image_id))
+    logger.info(get_file(token, loaded_image_id))
     # logger.info(create_cart(token, "fishes", "ff1"))
     # logger.info(get_cart(token, "fish_cart"))
     # logger.info(get_cart_items(token, "fish_cart"))
