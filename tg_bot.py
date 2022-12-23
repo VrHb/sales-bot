@@ -35,14 +35,10 @@ def start(bot, update):
     return "HANDLE_MENU"
 
 
-def echo(bot, update):
-    users_reply = update.message.text
-    update.message.reply_text(users_reply)
-    return "ECHO"
-
-
-def handle_menu(bot, update, redis_db):
+def handle_menu(bot, update):
     product_id = update.callback_query.data
+    keyboard = [[InlineKeyboardButton("Назад", callback_data="back")],]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     token_params = get_token()
     token = f"Bearer {token_params['access_token']}"
     logger.info(product_id)
@@ -52,17 +48,42 @@ def handle_menu(bot, update, redis_db):
     loaded_image_id = product_params["relationships"]["main_image"]["data"]["id"]
     image_link = get_file(token, loaded_image_id)["data"]["link"]["href"]
     chat_id = update.callback_query.message.chat_id
-    state = redis_db.get(chat_id)
-    logger.info(state)
     message_id = update.callback_query.message.message_id
     bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_photo(
         chat_id=chat_id,
         photo=image_link,
         caption=f"*{product_name}*\n\n{product_description}",
-        parse_mode="markdown"
+        parse_mode="markdown",
+        reply_markup=reply_markup
     )
-    return "START"
+    return "HANDLE_DESCRIPTION"
+
+
+def handle_description(bot, update):
+    user_reply = update.callback_query.data
+    if user_reply == "back":
+        token_params = get_token()
+        token = f"Bearer {token_params['access_token']}"
+        products = get_products(token)["data"]
+        keyboard = []
+        for product in products:
+            keyboard.append(
+                [InlineKeyboardButton(
+                    product["attributes"]["name"],
+                    callback_data=product["id"]
+                )]
+            )
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        chat_id = update.callback_query.message.chat_id
+        message_id = update.callback_query.message.message_id
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
+        bot.send_message(
+            chat_id=chat_id,
+            text="Choose:",
+            reply_markup=reply_markup
+        )
+        return "HANDLE_MENU"
 
 
 def handle_users_reply(bot, update, redis_db):
@@ -70,7 +91,6 @@ def handle_users_reply(bot, update, redis_db):
         user_reply = update.message.text
         chat_id = update.message.chat_id
     elif update.callback_query:
-        user_state = "HANDLE_MENU"
         user_reply = update.callback_query.data
         chat_id = update.callback_query.message.chat_id
     else:
@@ -79,11 +99,13 @@ def handle_users_reply(bot, update, redis_db):
         user_state = "START"
     else:
         user_state = redis_db.get(chat_id)
+
+    logger.info(user_state)
     
     states_functions = {
         "START": start,
         "HANDLE_MENU": handle_menu,
-        "ECHO": echo
+        "HANDLE_DESCRIPTION": handle_description,
     }
     state_handler = states_functions[user_state]
     try:
@@ -108,16 +130,21 @@ if __name__ == "__main__":
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(
-        CallbackQueryHandler(partial(handle_menu, redis_db=redis_db))
-    )
-    dispatcher.add_handler(
         MessageHandler(
             Filters.text,
             partial(handle_users_reply, redis_db=redis_db)
         )
     )
     dispatcher.add_handler(
-        CommandHandler("start", partial(handle_users_reply, redis_db=redis_db))
+        CallbackQueryHandler(
+            partial(handle_users_reply, redis_db=redis_db)
+        )
+    )
+    dispatcher.add_handler(
+        CommandHandler(
+            "start", 
+            partial(handle_users_reply, redis_db=redis_db)
+        )
     )
     updater.start_polling()
     updater.idle()
