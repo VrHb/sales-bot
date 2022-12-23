@@ -70,15 +70,25 @@ def handle_menu(bot, update):
         chat_id = update.callback_query.message.chat_id
         cart_params = ""
         items = get_cart_items(token, str(chat_id))["data"]
+        keyboard = []
         for item in items:
             
             # fix this strinf method
 
             cart_params += f"{item['name']}\n{item['description']}\n{item['meta']['display_price']['with_tax']['unit']['formatted']} per kg\n{item['quantity']} kg in cart for {item['meta']['display_price']['with_tax']['value']['formatted']}\n\n"
+            keyboard.append(
+                [InlineKeyboardButton(
+                    f"Убрать из корзины {item['name']}",
+                    callback_data=item["id"]
+                )]
+            )
+        keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
         total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         bot.send_message(
             chat_id=chat_id,
             text=cart_params + f" Total: {total_price}",
+            reply_markup=reply_markup,
         )
         return "HANDLE_CART"
     product_id = update.callback_query.data
@@ -142,7 +152,12 @@ def handle_description(bot, update):
 
 
 def handle_cart(bot, update):
-    pass
+    user_reply = update.callback_query.data
+    if user_reply == "back":
+        return "HANDLE_MENU"
+    
+    # Add delete logic for items
+
 
 def handle_users_reply(bot, update, redis_db):
     if update.message:
