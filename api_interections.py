@@ -112,7 +112,7 @@ def get_cart(token, cart_id):
         "Authorization": token,
     }
     response = requests.get(
-        f"https://api.moltin.com/v2/carts/{cart_id}",
+        f"https://api.moltin.com/v2/carts/{cart_id}/items",
         headers=headers
     )
     response.raise_for_status()
@@ -231,7 +231,7 @@ def main():
     # logger.info(create_cart(token, "fishes"))
     # cart = get_cart(token, "fishes")
     logger.info(get_cart(token, "196311441"))
-    logger.info(add_product_to_cart(token, product, "196311441", 3))
+    # logger.info(add_product_to_cart(token, product, "196311441", 3))
 
 
 if __name__ == "__main__":

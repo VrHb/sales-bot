@@ -27,6 +27,7 @@ def start(bot, update):
                 callback_data=product["id"]
             )]
         )
+    keyboard.append([InlineKeyboardButton("Корзина", callback_data="cart")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(
         text="Choose:",
@@ -58,6 +59,20 @@ def get_product_from_cms(product_id):
 
 
 def handle_menu(bot, update):
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
+    user_reply = update.callback_query.data
+    if user_reply == "cart":
+        chat_id = update.callback_query.message.chat_id
+        cart_params = ""
+        items = get_cart(token, str(chat_id))["data"]
+        for item in items:
+            cart_params += f"{item['name']}\n{item['description']}\n{item['unit_price']}\n{item['quantity']}\n\n"
+        bot.send_message(
+            chat_id=chat_id,
+            text=cart_params,
+        )
+        return "HANDLE_CART"
     product_id = update.callback_query.data
     product = get_product_from_cms(product_id)
     chat_id = update.callback_query.message.chat_id
@@ -99,6 +114,7 @@ def handle_description(bot, update):
                     callback_data=product["id"]
                 )]
             )
+        keyboard.append([InlineKeyboardButton("Корзина", callback_data="cart")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         chat_id = update.callback_query.message.chat_id
         message_id = update.callback_query.message.message_id
@@ -118,6 +134,9 @@ def handle_description(bot, update):
     logger.info(product_in_cart)
     return "HANDLE_DESCRIPTION"
 
+
+def handle_cart(bot, update):
+    pass
 
 def handle_users_reply(bot, update, redis_db):
     if update.message:
@@ -139,6 +158,7 @@ def handle_users_reply(bot, update, redis_db):
         "START": start,
         "HANDLE_MENU": handle_menu,
         "HANDLE_DESCRIPTION": handle_description,
+        "HANDLE_CART": handle_cart
     }
     state_handler = states_functions[user_state]
     try:
