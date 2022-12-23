@@ -10,7 +10,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import get_token, get_products, get_product, get_file
+from api_interections import get_token, get_products, get_product, get_file, \
+    get_cart, create_cart
 
 
 logger = logging.getLogger("quizbot")
@@ -35,25 +36,48 @@ def start(bot, update):
     return "HANDLE_MENU"
 
 
-def handle_menu(bot, update):
-    product_id = update.callback_query.data
-    keyboard = [[InlineKeyboardButton("Назад", callback_data="back")],]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+def create_user_cart(user_id):
     token_params = get_token()
     token = f"Bearer {token_params['access_token']}"
-    logger.info(product_id)
+    cart = create_cart(token, user_id)
+    return cart
+
+
+def get_product_from_cms(product_id):
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
     product_params = get_product(token, product_id)["data"]
-    product_name = product_params["attributes"]["name"]
-    product_description = product_params["attributes"]["description"]
     loaded_image_id = product_params["relationships"]["main_image"]["data"]["id"]
     image_link = get_file(token, loaded_image_id)["data"]["link"]["href"]
+    return {
+        "name": product_params["attributes"]["name"],
+        "sku": product_params["attributes"]["sku"],
+        "description": product_params["attributes"]["description"],
+        "image_link": image_link,
+    }
+
+
+def handle_menu(bot, update):
+    product_id = update.callback_query.data
+    product = get_product_from_cms(product_id)
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
+    keyboard = [
+        [
+            InlineKeyboardButton("1 кг", callback_data=1),
+            InlineKeyboardButton("5 кг", callback_data=5),
+            InlineKeyboardButton("10 кг", callback_data=10)
+        ],
+        [
+            InlineKeyboardButton("Назад", callback_data="back")
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_photo(
         chat_id=chat_id,
-        photo=image_link,
-        caption=f"*{product_name}*\n\n{product_description}",
+        photo=product["image_link"],
+        caption=f"*{product['name']}*\n\n{product['description']}",
         parse_mode="markdown",
         reply_markup=reply_markup
     )
@@ -62,6 +86,9 @@ def handle_menu(bot, update):
 
 def handle_description(bot, update):
     user_reply = update.callback_query.data
+    chat_id = update.callback_query.message.chat_id
+    logger.info(user_reply)
+    # user_cart = create_user_cart(chat_id)
     if user_reply == "back":
         token_params = get_token()
         token = f"Bearer {token_params['access_token']}"
@@ -84,6 +111,7 @@ def handle_description(bot, update):
             reply_markup=reply_markup
         )
         return "HANDLE_MENU"
+    return "HANDLE_DESCRIPTION"
 
 
 def handle_users_reply(bot, update, redis_db):
