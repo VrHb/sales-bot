@@ -1,4 +1,5 @@
 import os
+from pprint import pprint
 import logging
 from functools import partial
 
@@ -10,7 +11,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import add_product_to_cart, get_token, get_products, get_product, get_file, get_cart, create_cart
+from api_interections import add_product_to_cart, get_token, get_products, get_product, get_file, get_cart_items, get_cart, create_cart
 
 
 logger = logging.getLogger("quizbot")
@@ -63,14 +64,21 @@ def handle_menu(bot, update):
     token = f"Bearer {token_params['access_token']}"
     user_reply = update.callback_query.data
     if user_reply == "cart":
+        
+        # The same logic in start state (in one func mb)
+
         chat_id = update.callback_query.message.chat_id
         cart_params = ""
-        items = get_cart(token, str(chat_id))["data"]
+        items = get_cart_items(token, str(chat_id))["data"]
         for item in items:
-            cart_params += f"{item['name']}\n{item['description']}\n{item['unit_price']}\n{item['quantity']}\n\n"
+            
+            # fix this strinf method
+
+            cart_params += f"{item['name']}\n{item['description']}\n{item['meta']['display_price']['with_tax']['unit']['formatted']} per kg\n{item['quantity']} kg in cart for {item['meta']['display_price']['with_tax']['value']['formatted']}\n\n"
+        total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
         bot.send_message(
             chat_id=chat_id,
-            text=cart_params,
+            text=cart_params + f" Total: {total_price}",
         )
         return "HANDLE_CART"
     product_id = update.callback_query.data
@@ -128,10 +136,8 @@ def handle_description(bot, update):
     quantity, product_id = user_reply.split()
     chat_id = update.callback_query.message.chat_id
     product = get_product_from_cms(product_id)
-    #create_cart(token, chat_id)
-    logger.info(get_cart(token, chat_id))
-    product_in_cart = add_product_to_cart(token, product, str(chat_id), quantity)
-    logger.info(product_in_cart)
+    create_cart(token, chat_id)
+    add_product_to_cart(token, product, chat_id, int(quantity))
     return "HANDLE_DESCRIPTION"
 
 

@@ -107,12 +107,24 @@ def create_cart(token, cart_name):
     return response.json()
 
 
-def get_cart(token, cart_id):
+def get_cart_items(token, cart_id):
     headers = {
         "Authorization": token,
     }
     response = requests.get(
         f"https://api.moltin.com/v2/carts/{cart_id}/items",
+        headers=headers
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_cart(token, cart_id):
+    headers = {
+        "Authorization": token,
+    }
+    response = requests.get(
+        f"https://api.moltin.com/v2/carts/{cart_id}",
         headers=headers
     )
     response.raise_for_status()
@@ -184,12 +196,12 @@ def add_product_to_cart(token, product, cart_id, quantity):
     json_data = {
         "data": {
             "type": "custom_item",
-            "name": product["attributes"]["name"],
-            'sku': product["attributes"]["sku"],
-            'description': product["attributes"]["description"],
+            "name": product["name"],
+            'sku': product["sku"],
+            'description': product["description"],
             "quantity": quantity,
             'price': {
-                'amount': 300,
+                'amount': 30,
             },
         },
     }
@@ -214,7 +226,7 @@ def main():
     client_token = f"Bearer {client_token_params['access_token']}"
     logger.info(token)
     products = get_products(token)
-    product = products["data"][0]
+    product = products["data"][1]
     # logger.info(product)
     loaded_image_id = product["relationships"]["main_image"]["data"]["id"]
     logger.info(loaded_image_id)
@@ -230,7 +242,7 @@ def main():
     # logger.info(get_file(token, loaded_image_id))
     # logger.info(create_cart(token, "fishes"))
     # cart = get_cart(token, "fishes")
-    logger.info(get_cart(token, "196311441"))
+    # logger.info(get_cart(token, "196311441"))
     # logger.info(add_product_to_cart(token, product, "196311441", 3))
 
 
