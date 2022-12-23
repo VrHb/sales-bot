@@ -10,8 +10,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import get_token, get_products, get_product, get_file, \
-    get_cart, create_cart
+from api_interections import add_product_to_cart, get_token, get_products, get_product, get_file, get_cart, create_cart
 
 
 logger = logging.getLogger("quizbot")
@@ -50,6 +49,7 @@ def get_product_from_cms(product_id):
     loaded_image_id = product_params["relationships"]["main_image"]["data"]["id"]
     image_link = get_file(token, loaded_image_id)["data"]["link"]["href"]
     return {
+        "id": product_params["id"],
         "name": product_params["attributes"]["name"],
         "sku": product_params["attributes"]["sku"],
         "description": product_params["attributes"]["description"],
@@ -64,9 +64,9 @@ def handle_menu(bot, update):
     message_id = update.callback_query.message.message_id
     keyboard = [
         [
-            InlineKeyboardButton("1 кг", callback_data=1),
-            InlineKeyboardButton("5 кг", callback_data=5),
-            InlineKeyboardButton("10 кг", callback_data=10)
+            InlineKeyboardButton("1 кг", callback_data=f"1 {product_id}"),
+            InlineKeyboardButton("5 кг", callback_data=f"5 {product_id}"),
+            InlineKeyboardButton("10 кг", callback_data=f"10 {product_id}")
         ],
         [
             InlineKeyboardButton("Назад", callback_data="back")
@@ -85,13 +85,11 @@ def handle_menu(bot, update):
 
 
 def handle_description(bot, update):
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
     user_reply = update.callback_query.data
-    chat_id = update.callback_query.message.chat_id
     logger.info(user_reply)
-    # user_cart = create_user_cart(chat_id)
     if user_reply == "back":
-        token_params = get_token()
-        token = f"Bearer {token_params['access_token']}"
         products = get_products(token)["data"]
         keyboard = []
         for product in products:
@@ -111,6 +109,13 @@ def handle_description(bot, update):
             reply_markup=reply_markup
         )
         return "HANDLE_MENU"
+    quantity, product_id = user_reply.split()
+    chat_id = update.callback_query.message.chat_id
+    product = get_product_from_cms(product_id)
+    #create_cart(token, chat_id)
+    logger.info(get_cart(token, chat_id))
+    product_in_cart = add_product_to_cart(token, product, str(chat_id), quantity)
+    logger.info(product_in_cart)
     return "HANDLE_DESCRIPTION"
 
 

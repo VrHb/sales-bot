@@ -88,14 +88,13 @@ def get_product(token, product_id):
     return response.json()
 
 
-def create_cart(token, cart_name, cart_id):
+def create_cart(token, cart_name):
     headers = {
         "Authorization": token,
     }
     payload = {
         "data": {
             "name": f"{cart_name}",
-            "id": f"{cart_id}",
             "description": "How much is the fish?"
         }
     }
@@ -176,7 +175,7 @@ def get_file(token, file_id):
     return response.json()
 
 
-def add_product_to_cart(token, product, cart_id):
+def add_product_to_cart(token, product, cart_id, quantity):
     headers = {
         "Authorization": token,
         "Content-Type": "application/json",
@@ -188,9 +187,9 @@ def add_product_to_cart(token, product, cart_id):
             "name": product["attributes"]["name"],
             'sku': product["attributes"]["sku"],
             'description': product["attributes"]["description"],
-            'quantity': 1,
+            "quantity": quantity,
             'price': {
-                'amount': 3,
+                'amount': 300,
             },
         },
     }
@@ -228,11 +227,11 @@ def main():
     # image_id = file_params["data"]["id"]
     # logger.info(image_id)
     # logger.info(add_image_to_product(token, product["id"], image_id))
-    logger.info(get_file(token, loaded_image_id))
-    # logger.info(create_cart(token, "fishes", "ff1"))
-    # logger.info(get_cart(token, "fish_cart"))
-    # logger.info(get_cart_items(token, "fish_cart"))
-    # logger.info(add_product_to_cart(token, product, "fish_cart"))
+    # logger.info(get_file(token, loaded_image_id))
+    # logger.info(create_cart(token, "fishes"))
+    # cart = get_cart(token, "fishes")
+    logger.info(get_cart(token, "196311441"))
+    logger.info(add_product_to_cart(token, product, "196311441", 3))
 
 
 if __name__ == "__main__":
