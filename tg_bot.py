@@ -46,10 +46,9 @@ def send_cart(bot, chat_id, message_id):
     items = get_cart_items(token, str(chat_id))["data"]
     keyboard = []
     for item in items:
-        
-        # fix this string method
-
-        cart_params += f"{item['name']}\n{item['description']}\n{item['meta']['display_price']['with_tax']['unit']['formatted']} per kg\n{item['quantity']} kg in cart for {item['meta']['display_price']['with_tax']['value']['formatted']}\n\n"
+        item_price = item['meta']['display_price']['with_tax']['unit']['formatted']
+        item_price_value = item['meta']['display_price']['with_tax']['value']['formatted']
+        cart_params += f"{item['name']}\n{item['description']}\n{item_price} per kg\n{item['quantity']} kg in cart for {item_price_value}\n\n"
         keyboard.append(
             [InlineKeyboardButton(
                 f"Убрать из корзины {item['name']}",
@@ -58,7 +57,7 @@ def send_cart(bot, chat_id, message_id):
         )
     keyboard.append([InlineKeyboardButton("Оплатить", callback_data="pay")])
     keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
-    total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
+    total_price = get_cart(token, chat_id)["data"]["meta"]["display_price"]["with_tax"]["formatted"]
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_message(
@@ -69,18 +68,12 @@ def send_cart(bot, chat_id, message_id):
 
 
 def send_description(bot, chat_id, message_id, product_id):
-
-    # Add keyboard in one place
-
     keyboard = [
-        [
-            InlineKeyboardButton("1 кг", callback_data=f"1 {product_id}"),
+        [InlineKeyboardButton("1 кг", callback_data=f"1 {product_id}"),
             InlineKeyboardButton("5 кг", callback_data=f"5 {product_id}"),
             InlineKeyboardButton("10 кг", callback_data=f"10 {product_id}")
         ],
-        [
-            InlineKeyboardButton("Назад", callback_data="back")
-        ],
+        [InlineKeyboardButton("Назад", callback_data="back")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     product = get_product_from_cms(product_id)
@@ -147,7 +140,6 @@ def handle_description(bot, update):
         send_products(bot, chat_id, message_id)
         return "HANDLE_MENU"
     quantity, product_id = user_reply.split()
-    # fix get product once
     product = get_product_from_cms(product_id)
     create_cart(token, chat_id)
     add_product_to_cart(token, product, chat_id, int(quantity))

@@ -1,5 +1,4 @@
 import os
-import argparse
 import logging
 
 from dotenv import load_dotenv
@@ -7,18 +6,6 @@ import requests
 
 
 logger = logging.getLogger("salesbot")
-
-def authorize(func):
-    def wrapper(token, *args, **kwargs):
-        try:
-            result = func(token, *args, **kwargs)
-        except:
-            token = f"Bearer {get_token()['access_token']}"
-            result = func(token, *args, **kwargs)
-        finally:
-            return result
-    return wrapper
-
 
 def delete_item_from_cart(token, cart_id, product_id):
     headers = {
@@ -209,39 +196,3 @@ def add_product_to_cart(token, product, cart_id, quantity):
     )
     response.raise_for_status()
     return response.json()
-
-
-def main():
-    load_dotenv()
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=logging.INFO
-    )
-    token_params = get_token()
-    client_token_params = get_client_token()
-    token = f"Bearer {token_params['access_token']}"
-    client_token = f"Bearer {client_token_params['access_token']}"
-    logger.info(token)
-    products = get_products(token)
-    product = products["data"][1]
-    # logger.info(product)
-    loaded_image_id = product["relationships"]["main_image"]["data"]["id"]
-    logger.info(loaded_image_id)
-    """
-    file_params = upload_product_image(
-        token,
-        "https://images.fineartamerica.com/images-medium-large-5/green-fish-wendy-j-st-christopher.jpg"
-    )
-    """
-    # image_id = file_params["data"]["id"]
-    # logger.info(image_id)
-    # logger.info(add_image_to_product(token, product["id"], image_id))
-    # logger.info(get_file(token, loaded_image_id))
-    # logger.info(create_cart(token, "fishes"))
-    # cart = get_cart(token, "fishes")
-    # logger.info(get_cart(token, "196311441"))
-    # logger.info(add_product_to_cart(token, product, "196311441", 3))
-
-
-if __name__ == "__main__":
-    main()
