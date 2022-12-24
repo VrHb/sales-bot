@@ -11,12 +11,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import add_product_to_cart, get_token, get_products, get_product, get_file, get_cart_items, get_cart, create_cart
+from api_interections import add_product_to_cart, get_token, get_products, get_product, get_file, get_cart_items, get_cart, create_cart, delete_item_from_cart
 
 
 logger = logging.getLogger("quizbot")
 
-def start(bot, update):
+def send_products(bot, chat_id, message_id):
     token_params = get_token()
     token = f"Bearer {token_params['access_token']}"
     products = get_products(token)["data"]
@@ -30,10 +30,71 @@ def start(bot, update):
         )
     keyboard.append([InlineKeyboardButton("Корзина", callback_data="cart")])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
+    bot.send_message(
+        chat_id=chat_id,
         text="Choose:",
         reply_markup=reply_markup
     )
+
+
+def send_cart(bot, chat_id):
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
+    cart_params = ""
+    items = get_cart_items(token, str(chat_id))["data"]
+    keyboard = []
+    for item in items:
+        
+        # fix this string method
+
+        cart_params += f"{item['name']}\n{item['description']}\n{item['meta']['display_price']['with_tax']['unit']['formatted']} per kg\n{item['quantity']} kg in cart for {item['meta']['display_price']['with_tax']['value']['formatted']}\n\n"
+        keyboard.append(
+            [InlineKeyboardButton(
+                f"Убрать из корзины {item['name']}",
+                callback_data=item["id"]
+            )]
+        )
+    keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
+    total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(
+        chat_id=chat_id,
+        text=cart_params + f" Total: {total_price}",
+        reply_markup=reply_markup,
+    )
+
+
+def send_description(bot, chat_id, message_id, product_id):
+
+    # Add keyboard in one place
+
+    keyboard = [
+        [
+            InlineKeyboardButton("1 кг", callback_data=f"1 {product_id}"),
+            InlineKeyboardButton("5 кг", callback_data=f"5 {product_id}"),
+            InlineKeyboardButton("10 кг", callback_data=f"10 {product_id}")
+        ],
+        [
+            InlineKeyboardButton("Назад", callback_data="back")
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    product = get_product_from_cms(product_id)
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
+    bot.send_photo(
+        chat_id=chat_id,
+        photo=product["image_link"],
+        caption=f"*{product['name']}*\n\n{product['description']}",
+        parse_mode="markdown",
+        reply_markup=reply_markup
+    )
+
+
+def start(bot, update):
+    chat_id = update.message.chat_id
+    message_id = update.message.message_id
+    send_products(bot, chat_id, message_id)
     return "HANDLE_MENU"
 
 
@@ -60,91 +121,31 @@ def get_product_from_cms(product_id):
 
 
 def handle_menu(bot, update):
-    token_params = get_token()
-    token = f"Bearer {token_params['access_token']}"
     user_reply = update.callback_query.data
+    logger.info(user_reply)
+    chat_id = update.callback_query.message.chat_id
     if user_reply == "cart":
-        
-        # The same logic in start state (in one func mb)
-
-        chat_id = update.callback_query.message.chat_id
-        cart_params = ""
-        items = get_cart_items(token, str(chat_id))["data"]
-        keyboard = []
-        for item in items:
-            
-            # fix this strinf method
-
-            cart_params += f"{item['name']}\n{item['description']}\n{item['meta']['display_price']['with_tax']['unit']['formatted']} per kg\n{item['quantity']} kg in cart for {item['meta']['display_price']['with_tax']['value']['formatted']}\n\n"
-            keyboard.append(
-                [InlineKeyboardButton(
-                    f"Убрать из корзины {item['name']}",
-                    callback_data=item["id"]
-                )]
-            )
-        keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
-        total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        bot.send_message(
-            chat_id=chat_id,
-            text=cart_params + f" Total: {total_price}",
-            reply_markup=reply_markup,
-        )
+        send_cart(bot, chat_id)
         return "HANDLE_CART"
     product_id = update.callback_query.data
-    product = get_product_from_cms(product_id)
-    chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
-    keyboard = [
-        [
-            InlineKeyboardButton("1 кг", callback_data=f"1 {product_id}"),
-            InlineKeyboardButton("5 кг", callback_data=f"5 {product_id}"),
-            InlineKeyboardButton("10 кг", callback_data=f"10 {product_id}")
-        ],
-        [
-            InlineKeyboardButton("Назад", callback_data="back")
-        ],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
-    bot.send_photo(
-        chat_id=chat_id,
-        photo=product["image_link"],
-        caption=f"*{product['name']}*\n\n{product['description']}",
-        parse_mode="markdown",
-        reply_markup=reply_markup
-    )
+    send_description(bot, chat_id, message_id, product_id)
     return "HANDLE_DESCRIPTION"
 
 
 def handle_description(bot, update):
     token_params = get_token()
     token = f"Bearer {token_params['access_token']}"
+    chat_id = update.callback_query.message.chat_id
+    message_id = update.callback_query.message.message_id
     user_reply = update.callback_query.data
     logger.info(user_reply)
     if user_reply == "back":
-        products = get_products(token)["data"]
-        keyboard = []
-        for product in products:
-            keyboard.append(
-                [InlineKeyboardButton(
-                    product["attributes"]["name"],
-                    callback_data=product["id"]
-                )]
-            )
-        keyboard.append([InlineKeyboardButton("Корзина", callback_data="cart")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        chat_id = update.callback_query.message.chat_id
-        message_id = update.callback_query.message.message_id
-        bot.delete_message(chat_id=chat_id, message_id=message_id)
-        bot.send_message(
-            chat_id=chat_id,
-            text="Choose:",
-            reply_markup=reply_markup
-        )
+        send_products(bot, chat_id, message_id)
         return "HANDLE_MENU"
+    send_description(bot, chat_id, message_id, user_reply)
     quantity, product_id = user_reply.split()
-    chat_id = update.callback_query.message.chat_id
+    # fix get product once
     product = get_product_from_cms(product_id)
     create_cart(token, chat_id)
     add_product_to_cart(token, product, chat_id, int(quantity))
