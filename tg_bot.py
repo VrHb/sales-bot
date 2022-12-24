@@ -55,6 +55,7 @@ def send_cart(bot, chat_id):
                 callback_data=item["id"]
             )]
         )
+    keyboard.append([InlineKeyboardButton("Оплатить", callback_data="pay")])
     keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
     total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -158,14 +159,25 @@ def handle_cart(bot, update):
     logger.info(user_reply)
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
+    if user_reply == "pay":
+        bot.send_message(
+            chat_id=chat_id,
+            text="Введите e-mail"
+        )
+        return "WAITING_EMAIL"
     if user_reply == "back":
         send_products(bot, chat_id, message_id)
         return "HANDLE_MENU"
-    delete_item_from_cart(token, chat_id, user_reply)
-    
-    
-    # Add delete logic for items
+    delete_item_from_cart(token=token, cart_id=chat_id, product_id=user_reply)
 
+
+def handle_email(bot, update):
+    chat_id = update.message.chat_id
+    bot.send_message(
+        chat_id=chat_id,
+        text=f"ваш E-mail: {update.message.text}",
+    )
+    
 
 def handle_users_reply(bot, update, redis_db):
     if update.message:
@@ -187,7 +199,8 @@ def handle_users_reply(bot, update, redis_db):
         "START": start,
         "HANDLE_MENU": handle_menu,
         "HANDLE_DESCRIPTION": handle_description,
-        "HANDLE_CART": handle_cart
+        "HANDLE_CART": handle_cart,
+        "WAITING_EMAIL": handle_email,
     }
     state_handler = states_functions[user_state]
     try:
