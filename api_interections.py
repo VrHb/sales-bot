@@ -20,6 +20,16 @@ def authorize(func):
     return wrapper
 
 
+def delete_item_from_cart(token, cart_id, product_id):
+    headers = {
+        "Authorization": token,
+    }
+    url = f"https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}"
+    response = requests.delete(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_client_token():
     payload = {
         "client_id": os.getenv("MOLTIN_APP_CLIENT_ID"),
@@ -107,18 +117,6 @@ def create_cart(token, cart_name):
     return response.json()
 
 
-def get_cart_items(token, cart_id):
-    headers = {
-        "Authorization": token,
-    }
-    response = requests.get(
-        f"https://api.moltin.com/v2/carts/{cart_id}/items",
-        headers=headers
-    )
-    response.raise_for_status()
-    return response.json()
-
-
 def get_cart(token, cart_id):
     headers = {
         "Authorization": token,
@@ -201,7 +199,7 @@ def add_product_to_cart(token, product, cart_id, quantity):
             'description': product["description"],
             "quantity": quantity,
             'price': {
-                'amount': 30,
+                'amount': 530,
             },
         },
     }

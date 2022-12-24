@@ -60,7 +60,7 @@ def send_cart(bot, chat_id):
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_message(
         chat_id=chat_id,
-        text=cart_params + f" Total: {total_price}",
+        text=cart_params + f"Total: {total_price}",
         reply_markup=reply_markup,
     )
 
@@ -143,7 +143,6 @@ def handle_description(bot, update):
     if user_reply == "back":
         send_products(bot, chat_id, message_id)
         return "HANDLE_MENU"
-    send_description(bot, chat_id, message_id, user_reply)
     quantity, product_id = user_reply.split()
     # fix get product once
     product = get_product_from_cms(product_id)
@@ -153,9 +152,17 @@ def handle_description(bot, update):
 
 
 def handle_cart(bot, update):
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
     user_reply = update.callback_query.data
+    logger.info(user_reply)
+    chat_id = update.callback_query.message.chat_id
+    message_id = update.callback_query.message.message_id
     if user_reply == "back":
+        send_products(bot, chat_id, message_id)
         return "HANDLE_MENU"
+    delete_item_from_cart(token, chat_id, user_reply)
+    
     
     # Add delete logic for items
 
