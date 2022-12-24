@@ -54,5 +54,5 @@ pip install -r requirements.txt
 - Запускаем telegram бота:
 
 ```
-python tg_bot.py --help
+python tg_bot.py
 ```
