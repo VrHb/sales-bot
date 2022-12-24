@@ -57,15 +57,14 @@ def get_token():
     return response.json()
 
 
-def create_customer(token):
+def create_customer(token, name, e_mail):
     headers = {
         "Authorization": token,
     }
     payload = {
         "data": {
-            "name": "Jack Sparrow",
-            "password": "password",
-            "email": "some_email@mail.com",
+            "name": name,
+            "email": e_mail,
             "type": "customer",
         }
     }

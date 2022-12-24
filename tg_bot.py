@@ -1,17 +1,18 @@
 import os
-from pprint import pprint
 import logging
 from functools import partial
 
-import redis
-
 from dotenv import load_dotenv
+
+import redis
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackQueryHandler, \
     CommandHandler, MessageHandler 
 
-from api_interections import add_product_to_cart, get_token, get_products, get_product, get_file, get_cart_items, get_cart, create_cart, delete_item_from_cart
+from api_interections import add_product_to_cart, get_token, get_products, \
+    get_product, get_file, get_cart_items, get_cart, create_cart, \
+    delete_item_from_cart, create_customer
 
 
 logger = logging.getLogger("quizbot")
@@ -38,7 +39,7 @@ def send_products(bot, chat_id, message_id):
     )
 
 
-def send_cart(bot, chat_id):
+def send_cart(bot, chat_id, message_id):
     token_params = get_token()
     token = f"Bearer {token_params['access_token']}"
     cart_params = ""
@@ -59,6 +60,7 @@ def send_cart(bot, chat_id):
     keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
     total_price = get_cart(token, str(chat_id))["data"]["meta"]["display_price"]["with_tax"]["formatted"]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_message(
         chat_id=chat_id,
         text=cart_params + f"Total: {total_price}",
@@ -124,12 +126,12 @@ def get_product_from_cms(product_id):
 def handle_menu(bot, update):
     user_reply = update.callback_query.data
     logger.info(user_reply)
+    message_id = update.callback_query.message.message_id
     chat_id = update.callback_query.message.chat_id
     if user_reply == "cart":
-        send_cart(bot, chat_id)
+        send_cart(bot, chat_id, message_id)
         return "HANDLE_CART"
     product_id = update.callback_query.data
-    message_id = update.callback_query.message.message_id
     send_description(bot, chat_id, message_id, product_id)
     return "HANDLE_DESCRIPTION"
 
@@ -149,7 +151,8 @@ def handle_description(bot, update):
     product = get_product_from_cms(product_id)
     create_cart(token, chat_id)
     add_product_to_cart(token, product, chat_id, int(quantity))
-    return "HANDLE_DESCRIPTION"
+    send_products(bot, chat_id, message_id)
+    return "HANDLE_MENU"
 
 
 def handle_cart(bot, update):
@@ -160,6 +163,7 @@ def handle_cart(bot, update):
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
     if user_reply == "pay":
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
         bot.send_message(
             chat_id=chat_id,
             text="Введите e-mail"
@@ -169,14 +173,26 @@ def handle_cart(bot, update):
         send_products(bot, chat_id, message_id)
         return "HANDLE_MENU"
     delete_item_from_cart(token=token, cart_id=chat_id, product_id=user_reply)
+    send_cart(bot, chat_id, message_id)
+    return "HANDLE_CART"
 
 
 def handle_email(bot, update):
+    token_params = get_token()
+    token = f"Bearer {token_params['access_token']}"
     chat_id = update.message.chat_id
+    message_id = update.message.message_id
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_message(
         chat_id=chat_id,
-        text=f"ваш E-mail: {update.message.text}",
+        text=f"ваш e-mail: {update.message.text}",
     )
+    user = create_customer(
+        token,
+        name=update.message.from_user.username,
+        e_mail=update.message.text
+    )
+    logger.info(user)
     
 
 def handle_users_reply(bot, update, redis_db):
@@ -212,7 +228,7 @@ def handle_users_reply(bot, update, redis_db):
 
 if __name__ == "__main__":
     load_dotenv()
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    logging.basicConfig(format="%(asctime)s - %(lineno)d - %(levelname)s - %(message)s",
         level=logging.INFO
     )
     redis_db = redis.Redis(
