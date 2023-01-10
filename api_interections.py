@@ -17,9 +17,9 @@ def delete_item_from_cart(token, cart_id, product_id):
     return response.json()
 
 
-def get_client_token():
+def get_client_token(moltinapp_client_id):
     payload = {
-        "client_id": os.getenv("MOLTIN_APP_CLIENT_ID"),
+        "client_id": moltinapp_client_id,
         "grant_type": "implicit"
     }
     response = requests.post(
@@ -30,10 +30,10 @@ def get_client_token():
     return response.json()
 
 
-def get_token():
+def get_token(moltin_client_id, moltin_client_secret):
     payload = {
-        "client_id": os.getenv("MOLTIN_CLIENT_ID"),
-        "client_secret": os.getenv("MOLTIN_CLIENT_SECRET"),
+        "client_id": moltin_client_id,
+        "client_secret": moltin_client_secret,
         "grant_type": "client_credentials"
     }
     response = requests.post(
