@@ -137,6 +137,7 @@ def upload_product_image(token, file_url):
         headers=headers,
         files=files
     )
+    response.raise_for_status()
     return response.json()
 
 
@@ -157,6 +158,7 @@ def add_image_to_product(token, product_id, image_id):
         headers=headers,
         json=payload
     )
+    response.raise_for_status()
     return response.status_code
 
 
@@ -168,6 +170,7 @@ def get_file(token, file_id):
         f"https://api.moltin.com/v2/files/{file_id}",
         headers=headers
     )
+    response.raise_for_status()
     return response.json()
 
 
