@@ -1,5 +1,6 @@
-import time
 import os
+import time
+from textwrap import dedent
 import logging
 from functools import partial
 
@@ -47,7 +48,14 @@ def send_cart(bot, chat_id, message_id, token_params):
     for item in items:
         item_price = item['meta']['display_price']['with_tax']['unit']['formatted']
         item_price_value = item['meta']['display_price']['with_tax']['value']['formatted']
-        cart_params += f"{item['name']}\n{item['description']}\n{item_price} per kg\n{item['quantity']} kg in cart for {item_price_value}\n\n"
+        cart_params += dedent(
+        f"""\
+        {item['name']}
+        {item['description']}
+        {item_price} per kg{item['quantity']} kg in cart for {item_price_value}
+
+        """
+        )
         keyboard.append(
             [InlineKeyboardButton(
                 f"Убрать из корзины {item['name']}",
@@ -80,7 +88,12 @@ def send_description(bot, chat_id, message_id, product_id, token_params):
     bot.send_photo(
         chat_id=chat_id,
         photo=product["image_link"],
-        caption=f"*{product['name']}*\n\n{product['description']}",
+        caption=dedent(
+            f"""\
+            *{product['name']}*
+
+            {product['description']}"""
+        ),
         parse_mode="markdown",
         reply_markup=reply_markup
     )
