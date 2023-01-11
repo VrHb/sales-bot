@@ -52,7 +52,8 @@ def send_cart(bot, chat_id, message_id, token_params):
         f"""\
         {item['name']}
         {item['description']}
-        {item_price} per kg{item['quantity']} kg in cart for {item_price_value}
+        {item_price} per kg
+        {item['quantity']} kg in cart for {item_price_value}
 
         """
         )
@@ -106,12 +107,6 @@ def start(bot, update, token_params):
     return "HANDLE_MENU"
 
 
-def create_user_cart(user_id, token_params):
-    token = f"Bearer {token_params['access_token']}"
-    cart = create_cart(token, user_id)
-    return cart
-
-
 def get_product_from_cms(product_id, token_params):
     token = f"Bearer {token_params['access_token']}"
     product_params = get_product(token, product_id)["data"]
@@ -128,7 +123,6 @@ def get_product_from_cms(product_id, token_params):
 
 def handle_menu(bot, update, token_params):
     user_reply = update.callback_query.data
-    logger.info(user_reply)
     message_id = update.callback_query.message.message_id
     chat_id = update.callback_query.message.chat_id
     if user_reply == "cart":
@@ -144,7 +138,6 @@ def handle_description(bot, update, token_params):
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
     user_reply = update.callback_query.data
-    logger.info(user_reply)
     if user_reply == "back":
         send_products(bot, chat_id, message_id, token_params)
         return "HANDLE_MENU"
@@ -159,7 +152,6 @@ def handle_description(bot, update, token_params):
 def handle_cart(bot, update, token_params):
     token = f"Bearer {token_params['access_token']}"
     user_reply = update.callback_query.data
-    logger.info(user_reply)
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
     if user_reply == "pay":
@@ -217,8 +209,6 @@ def handle_users_reply(bot, update, redis_db, token_params, client_params):
         "WAITING_EMAIL": handle_email,
     }
     state_handler = states_functions[user_state]
-    logger.info(current_time)
-    logger.info(token_params["expires"])
     if current_time > token_params["expires"]:
         token_params = get_token(
             client_params["client_id"],
