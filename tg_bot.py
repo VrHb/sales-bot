@@ -1,3 +1,4 @@
+import time
 import os
 import logging
 from functools import partial
@@ -15,10 +16,9 @@ from api_interections import add_product_to_cart, get_token, get_products, \
     delete_item_from_cart, create_customer
 
 
-logger = logging.getLogger("quizbot")
+logger = logging.getLogger("sailbot")
 
-def send_products(bot, chat_id, message_id):
-    token_params = get_token()
+def send_products(bot, chat_id, message_id, token_params):
     token = f"Bearer {token_params['access_token']}"
     products = get_products(token)["data"]
     keyboard = []
@@ -39,8 +39,7 @@ def send_products(bot, chat_id, message_id):
     )
 
 
-def send_cart(bot, chat_id, message_id):
-    token_params = get_token()
+def send_cart(bot, chat_id, message_id, token_params):
     token = f"Bearer {token_params['access_token']}"
     cart_params = ""
     items = get_cart_items(token, str(chat_id))["data"]
@@ -67,7 +66,7 @@ def send_cart(bot, chat_id, message_id):
     )
 
 
-def send_description(bot, chat_id, message_id, product_id):
+def send_description(bot, chat_id, message_id, product_id, token_params):
     keyboard = [
         [InlineKeyboardButton("1 кг", callback_data=f"1 {product_id}"),
             InlineKeyboardButton("5 кг", callback_data=f"5 {product_id}"),
@@ -76,7 +75,7 @@ def send_description(bot, chat_id, message_id, product_id):
         [InlineKeyboardButton("Назад", callback_data="back")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    product = get_product_from_cms(product_id)
+    product = get_product_from_cms(product_id, token_params)
     bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_photo(
         chat_id=chat_id,
@@ -87,22 +86,20 @@ def send_description(bot, chat_id, message_id, product_id):
     )
 
 
-def start(bot, update):
+def start(bot, update, token_params):
     chat_id = update.message.chat_id
     message_id = update.message.message_id
-    send_products(bot, chat_id, message_id)
+    send_products(bot, chat_id, message_id, token_params)
     return "HANDLE_MENU"
 
 
-def create_user_cart(user_id):
-    token_params = get_token()
+def create_user_cart(user_id, token_params):
     token = f"Bearer {token_params['access_token']}"
     cart = create_cart(token, user_id)
     return cart
 
 
-def get_product_from_cms(product_id):
-    token_params = get_token()
+def get_product_from_cms(product_id, token_params):
     token = f"Bearer {token_params['access_token']}"
     product_params = get_product(token, product_id)["data"]
     loaded_image_id = product_params["relationships"]["main_image"]["data"]["id"]
@@ -116,39 +113,37 @@ def get_product_from_cms(product_id):
     }
 
 
-def handle_menu(bot, update):
+def handle_menu(bot, update, token_params):
     user_reply = update.callback_query.data
     logger.info(user_reply)
     message_id = update.callback_query.message.message_id
     chat_id = update.callback_query.message.chat_id
     if user_reply == "cart":
-        send_cart(bot, chat_id, message_id)
+        send_cart(bot, chat_id, message_id, token_params)
         return "HANDLE_CART"
     product_id = update.callback_query.data
-    send_description(bot, chat_id, message_id, product_id)
+    send_description(bot, chat_id, message_id, product_id, token_params)
     return "HANDLE_DESCRIPTION"
 
 
-def handle_description(bot, update):
-    token_params = get_token()
+def handle_description(bot, update, token_params):
     token = f"Bearer {token_params['access_token']}"
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
     user_reply = update.callback_query.data
     logger.info(user_reply)
     if user_reply == "back":
-        send_products(bot, chat_id, message_id)
+        send_products(bot, chat_id, message_id, token_params)
         return "HANDLE_MENU"
     quantity, product_id = user_reply.split()
-    product = get_product_from_cms(product_id)
+    product = get_product_from_cms(product_id, token_params)
     create_cart(token, chat_id)
     add_product_to_cart(token, product, chat_id, int(quantity))
-    send_products(bot, chat_id, message_id)
+    send_products(bot, chat_id, message_id, token_params)
     return "HANDLE_MENU"
 
 
-def handle_cart(bot, update):
-    token_params = get_token()
+def handle_cart(bot, update, token_params):
     token = f"Bearer {token_params['access_token']}"
     user_reply = update.callback_query.data
     logger.info(user_reply)
@@ -162,15 +157,14 @@ def handle_cart(bot, update):
         )
         return "WAITING_EMAIL"
     if user_reply == "back":
-        send_products(bot, chat_id, message_id)
+        send_products(bot, chat_id, message_id, token_params)
         return "HANDLE_MENU"
     delete_item_from_cart(token=token, cart_id=chat_id, product_id=user_reply)
-    send_cart(bot, chat_id, message_id)
+    send_cart(bot, chat_id, message_id, token_params)
     return "HANDLE_CART"
 
 
-def handle_email(bot, update):
-    token_params = get_token()
+def handle_email(bot, update, token_params):
     token = f"Bearer {token_params['access_token']}"
     chat_id = update.message.chat_id
     message_id = update.message.message_id
@@ -187,7 +181,8 @@ def handle_email(bot, update):
     logger.info(user)
     
 
-def handle_users_reply(bot, update, redis_db):
+def handle_users_reply(bot, update, redis_db, token_params, client_params):
+    current_time = time.time()
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -200,9 +195,7 @@ def handle_users_reply(bot, update, redis_db):
         user_state = "START"
     else:
         user_state = redis_db.get(chat_id)
-
     logger.info(user_state)
-    
     states_functions = {
         "START": start,
         "HANDLE_MENU": handle_menu,
@@ -211,8 +204,15 @@ def handle_users_reply(bot, update, redis_db):
         "WAITING_EMAIL": handle_email,
     }
     state_handler = states_functions[user_state]
+    logger.info(current_time)
+    logger.info(token_params["expires"])
+    if current_time > token_params["expires"]:
+        token_params = get_token(
+            client_params["client_id"],
+            client_params["client_secret"]
+        )
     try:
-        next_state = state_handler(bot, update)
+        next_state = state_handler(bot, update, token_params)
         redis_db.set(chat_id, next_state)
     except Exception as err:
         print(err)
@@ -229,24 +229,52 @@ if __name__ == "__main__":
         password=os.getenv("REDIS_PASSWORD"),
         decode_responses=True
     )
+    moltin_client_id = os.getenv("MOLTIN_CLIENT_ID")
+    moltin_client_secret = os.getenv("MOLTIN_CLIENT_SECRET")
+    moltin_token_params = get_token(moltin_client_id, moltin_client_secret)
+    logger.info(moltin_token_params)
     bot_token = os.getenv("TG_BOT_TOKEN")
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(
         MessageHandler(
             Filters.text,
-            partial(handle_users_reply, redis_db=redis_db)
+            partial(
+                handle_users_reply,
+                redis_db=redis_db,
+                token_params=moltin_token_params,
+                client_params={
+                    "client_id": moltin_client_id,
+                    "client_secret": moltin_client_secret
+                }
+            )
         )
     )
     dispatcher.add_handler(
         CallbackQueryHandler(
-            partial(handle_users_reply, redis_db=redis_db)
+            partial(
+                handle_users_reply,
+                redis_db=redis_db,
+                token_params=moltin_token_params,
+                client_params={
+                    "client_id": moltin_client_id,
+                    "client_secret": moltin_client_secret
+                }
+            )
         )
     )
     dispatcher.add_handler(
         CommandHandler(
             "start", 
-            partial(handle_users_reply, redis_db=redis_db)
+            partial(
+                handle_users_reply,
+                redis_db=redis_db,
+                token_params=moltin_token_params,
+                client_params={
+                    "client_id": moltin_client_id,
+                    "client_secret": moltin_client_secret
+                }
+            )
         )
     )
     updater.start_polling()
