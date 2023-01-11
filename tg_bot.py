@@ -32,12 +32,12 @@ def send_products(bot, chat_id, message_id, token_params):
         )
     keyboard.append([InlineKeyboardButton("Корзина", callback_data="cart")])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_message(
         chat_id=chat_id,
         text="Choose:",
         reply_markup=reply_markup
     )
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
 def send_cart(bot, chat_id, message_id, token_params):
@@ -66,12 +66,12 @@ def send_cart(bot, chat_id, message_id, token_params):
     keyboard.append([InlineKeyboardButton(f"В меню", callback_data="back")])
     total_price = get_cart(token, chat_id)["data"]["meta"]["display_price"]["with_tax"]["formatted"]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_message(
         chat_id=chat_id,
         text=cart_params + f"Total: {total_price}",
         reply_markup=reply_markup,
     )
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
 def send_description(bot, chat_id, message_id, product_id, token_params):
@@ -84,7 +84,6 @@ def send_description(bot, chat_id, message_id, product_id, token_params):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     product = get_product_from_cms(product_id, token_params)
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_photo(
         chat_id=chat_id,
         photo=product["image_link"],
@@ -97,6 +96,7 @@ def send_description(bot, chat_id, message_id, product_id, token_params):
         parse_mode="markdown",
         reply_markup=reply_markup
     )
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
 def start(bot, update, token_params):
@@ -163,11 +163,11 @@ def handle_cart(bot, update, token_params):
     chat_id = update.callback_query.message.chat_id
     message_id = update.callback_query.message.message_id
     if user_reply == "pay":
-        bot.delete_message(chat_id=chat_id, message_id=message_id)
         bot.send_message(
             chat_id=chat_id,
             text="Введите e-mail"
         )
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
         return "WAITING_EMAIL"
     if user_reply == "back":
         send_products(bot, chat_id, message_id, token_params)
@@ -181,11 +181,11 @@ def handle_email(bot, update, token_params):
     token = f"Bearer {token_params['access_token']}"
     chat_id = update.message.chat_id
     message_id = update.message.message_id
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
     bot.send_message(
         chat_id=chat_id,
         text=f"ваш e-mail: {update.message.text}",
     )
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
     user = create_customer(
         token,
         name=update.message.from_user.username,
