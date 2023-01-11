@@ -17,7 +17,7 @@ from api_interections import add_product_to_cart, get_token, get_products, \
     delete_item_from_cart, create_customer
 
 
-logger = logging.getLogger("sailbot")
+logger = logging.getLogger("salesbot")
 
 def send_products(bot, chat_id, message_id, token_params):
     token = f"Bearer {token_params['access_token']}"

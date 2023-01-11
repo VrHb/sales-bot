@@ -1,11 +1,5 @@
-import os
-import logging
-
-from dotenv import load_dotenv
 import requests
 
-
-logger = logging.getLogger("salesbot")
 
 def delete_item_from_cart(token, cart_id, product_id):
     headers = {
